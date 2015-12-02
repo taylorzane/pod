@@ -16,20 +16,28 @@ var reloadConf = function (req, res, next) {
     next()
 }
 
-var auth = express.basicAuth(function (user, pass) {
+var auth = function (req, res, next) {
     var u = conf.web.username || 'admin',
         p = conf.web.password || 'admin'
-    return user === u && pass === p
-})
 
-app.configure(function(){
-    app.set('views', __dirname + '/views')
-    app.set('view engine', 'ejs')
-    app.use(express.favicon())
-    app.use(reloadConf)
-    app.use(app.router)
-    app.use(express.static(path.join(__dirname, 'static')))
-})
+    var b64auth = (req.headers.authorization || '').split(' ')[1] || ''
+
+    var credentials = new Buffer(b64auth, 'base64').toString().split(':')
+    var username = credentials[0]
+    var password = credentials[1]
+
+    if (!username || !password || username !== u || password !== p) {
+        res.set('WWW-Authenticate', 'Basic realm="none"')
+        res.status(401).send('401 Unauthorized')
+    } else {
+        next()
+    }
+}
+
+app.set('views', __dirname + '/views')
+app.set('view engine', 'ejs')
+app.use(reloadConf)
+app.use(express.static(path.join(__dirname, 'static')))
 
 app.get('/', auth, function (req, res) {
     pod.listApps(function (err, list) {
@@ -47,7 +55,7 @@ app.get('/json', auth, function (req, res) {
     })
 })
 
-app.post('/hooks/:appid', express.bodyParser(), function (req, res) {
+app.post('/hooks/:appid', function (req, res) {
     var appid = req.params.appid,
         payload = JSON.stringify(req.body),
         app = conf.apps[appid]
