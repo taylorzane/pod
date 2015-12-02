@@ -1,11 +1,12 @@
-var http     = require('http'),
-    fs       = require('fs'),
-    path     = require('path'),
-    spawn    = require('child_process').spawn,
-    express  = require('express'),
-    pod      = require('../lib/api'),
-    ghURL    = require('parse-github-url'),
-    app      = express()
+var http       = require('http'),
+    fs         = require('fs'),
+    path       = require('path'),
+    spawn      = require('child_process').spawn,
+    express    = require('express'),
+    pod        = require('../lib/api'),
+    ghURL      = require('parse-github-url'),
+    bodyParser = require('body-parser'),
+    app        = express()
 
 // late def, wait until pod is ready
 var conf
@@ -55,7 +56,7 @@ app.get('/json', auth, function (req, res) {
     })
 })
 
-app.post('/hooks/:appid', function (req, res) {
+app.post('/hooks/:appid', bodyParser.json(), function (req, res) {
     var appid = req.params.appid,
         payload = JSON.stringify(req.body),
         app = conf.apps[appid]
@@ -94,26 +95,32 @@ pod.once('ready', function () {
 // Helpers
 function verify (req, app, payload) {
     // not even a remote app
-    if (!app.remote) return
+    if (!app.remote) {
+        console.error('[' + app.name + '] ' + 'Not a remote app. Aborted.')
+        return
+    }
     // check repo match
 
     var repo = payload.repository
     var repoURL
 
     if (repo.links && /bitbucket\.org/.test(repo.links.html.href)) {
-        console.log('\nreceived webhook request from: ' + repo.links.html.href)
+        console.log('[' + app.name + '] ' + 'Received webhook request from: ' + repo.links.html.href)
 
         repoURL = repo.links.html.href
     } else {
-        console.log('\nreceived webhook request from: ' + repo.url)
+        console.log('[' + app.name + '] ' + 'Received webhook request from: ' + repo.url)
 
         repoURL = repo.url
     }
 
-    if (!repoURL) return
+    if (!repoURL) {
+        console.error('[' + app.name + '] ' + 'No repo URL. Aborted.')
+        return
+    }
 
     if (ghURL(repoURL).repopath !== ghURL(app.remote).repopath) {
-        console.log('aborted.')
+        console.error('[' + app.name + '] ' + 'Repository paths do not match. Aborted.')
         return
     }
 
@@ -130,26 +137,33 @@ function verify (req, app, payload) {
             payload.commits[payload.commits.length - 1];
     }
 
-    if (!commit) return
+    if (!commit) {
+        console.error('[' + app.name + '] ' + 'No commit. Aborted.')
+        return
+    }
 
     // skip it with [pod skip] message
     console.log('commit message: ' + commit.message)
     if (/\[pod skip\]/.test(commit.message)) {
-        console.log('aborted.')
+        console.log('[' + app.name + '] ' + '[pod skip] found in commit message. Aborted.')
         return
     }
     // check branch match
     var ref = commit.name ? commit.name : payload.ref
 
-    if (!ref) return
+    if (!ref) {
+        console.error('[' + app.name + '] ' + 'No ref. Aborted.')
+        return
+    }
 
     var branch = ref.replace('refs/heads/', ''),
         expected = app.branch || 'master'
     console.log('expected branch: ' + expected + ', got branch: ' + branch)
     if (branch !== expected) {
-        console.log('aborted.')
+        console.log('[' + app.name + '] ' + 'Branches did not match.')
         return
     }
+
     return true
 }
 
