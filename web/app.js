@@ -79,7 +79,7 @@ app.post('/hooks/:appid', bodyParser.json(), function (req, res) {
 // listen when API is ready
 pod.once('ready', function () {
     // load config first
-    conf = pod.getConfig()
+    conf = pod.getConfig(true)
     // conditional open up jsonp based on config
     if (conf.web.jsonp === true) {
         app.get('/jsonp', function (req, res) {
