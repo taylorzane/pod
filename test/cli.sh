@@ -69,7 +69,7 @@ echo "    Commands"
 
 msg="create"
 OUT=`POD_CONF=$conf $pod create test 2>$err | wc -l`
-[ $OUT -eq 4 ] || fail "$msg" 
+[ $OUT -eq 4 ] || fail "$msg"
 success "$msg"
 
 msg="start"
@@ -119,6 +119,16 @@ OUT=`POD_CONF=$conf $pod list 2>$err | wc -l`
 OUT=`POD_CONF=$conf $pod list 2>$err | grep ON | wc -l`
 [ $OUT -eq 1 ] || fail "$msg : expect 1 ON, got $OUT"
 OUT=`POD_CONF=$conf $pod list 2>$err | grep OFF | wc -l`
+[ $OUT -eq 1 ] || fail "$msg : expect 1 OFF, got $OUT"
+success "$msg"
+
+msg="status"
+POD_CONF=$conf $pod start test >/dev/null 2>$err
+OUT=`POD_CONF=$conf $pod status 2>$err | wc -l`
+[ $OUT -eq 6 ] || fail "$msg : expect 6 lines, got $OUT"
+OUT=`POD_CONF=$conf $pod status 2>$err | grep ON | wc -l`
+[ $OUT -eq 1 ] || fail "$msg : expect 1 ON, got $OUT"
+OUT=`POD_CONF=$conf $pod status 2>$err | grep OFF | wc -l`
 [ $OUT -eq 1 ] || fail "$msg : expect 1 OFF, got $OUT"
 success "$msg"
 
