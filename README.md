@@ -95,7 +95,7 @@ The first time you run `pod` it will ask you where you want to put your stuff. T
     start <app>             Start an app monitored by pm2
     stop <app>              Stop an app
     restart <app>           Restart an app that's already running
-    list                    List apps and status
+    list|status             List apps and status
     startall                Start all apps not already running
     stopall                 Stop all apps
     restartall              Restart all running apps
@@ -164,7 +164,12 @@ Example Config:
 
     // max times of unstable restarts allowed
     // before the app is auto stopped.
-    "max_restarts": 10
+    "max_restarts": 10,
+
+    // applying a theme (only "dark" is supported) allows
+    // certain text elements to be viewed easier on a terminal
+    // with a darker color scheme.
+    "theme": "dark",
 
     // config for the web interface
     "web": {
@@ -219,6 +224,42 @@ Example Config:
 }
 ```
 
+Since 0.8.7, individual apps may have their own `.podconfig` files located in their repositories. This allows for easier management of individual configurations.
+
+Example `.podconfig`:
+
+``` js
+{
+    // passed to the app as process.env.NODE_ENV
+    // if not set, will inherit from global settings
+    "node_env": "production",
+
+    // passed to the app as process.env.PORT
+    // if not set, pod will try to parse from app's
+    // main file (for displaying only), but not
+    // guarunteed to be correct.
+    "port": 8080,
+
+    // pod will look for this script before checking
+    // in package.json of the app.
+    "script": "dist/server.js",
+
+    // *** any valid pm2 config here gets passed to pm2. ***
+
+    // spin up 2 instances using cluster module
+    "instances": 2,
+
+    // pass in additional command line args to the app
+    "args": "['--toto=heya coco', '-d', '1']",
+
+    // file paths for stdout, stderr logs and pid.
+    // Note: if an absolute path is not given,
+    // this path will resolve to the directory of the .podconfig
+    "error_file": "/absolute/path/to/stderr.log",
+    "out_file": "relative/path/to/stdout.log"
+}
+```
+
 ## Using PM2 Directly
 
 Pod relies on pm2 for process management under the hood. When installing pod, the `pm2` executable will also be linked globally. You can invoke `pm2` commands for more detailed process information.
@@ -266,6 +307,13 @@ pod.once('ready', function () {
 The API methods follow a conventional error-first callback style. Refer to the source for more details.
 
 ## Changelog
+
+### 0.8.7
+
+- Upgraded all modules to their latest version.
+- Implemented per app config files called `.podconfig`.
+- Added basic theming support. (_very_ basic support)
+- Added latest commit (if available) to list/status page.
 
 ### 0.8.6
 
